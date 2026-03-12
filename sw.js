@@ -1,4 +1,4 @@
-const CACHE_NAME = "church-checkin-v1";
+const CACHE_NAME = "church-checkin-v0.0.1";
 
 const urlsToCache = [
   "./",
