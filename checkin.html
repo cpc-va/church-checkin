@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>CPC Check-In</title>
+
+<style>
+
+body{
+font-family:Arial;
+padding:20px;
+max-width:750px;
+margin:auto;
+}
+
+h2{margin-bottom:5px}
+
+#today{
+font-weight:bold;
+margin-bottom:10px;
+}
+
+#topToolbar{
+position:sticky;
+top:0;
+background:#f8f8f8;
+padding:10px;
+border-bottom:2px solid #ccc;
+z-index:100;
+}
+
+#search{
+width:100%;
+font-size:20px;
+padding:14px;
+margin-top:6px;
+margin-bottom:10px;
+}
+
+#counter{
+font-weight:bold;
+margin:6px 0;
+}
+
+/* Buttons */
+
+#addBtn{
+background:#007bff;
+color:white;
+border:none;
+font-size:18px;
+padding:10px 16px;
+cursor:pointer;
+margin-top:8px;
+}
+
+.exportBtn{
+background:#28a745;
+color:white;
+border:none;
+font-size:18px;
+padding:10px 16px;
+cursor:pointer;
+margin-left:5px;
+}
+
+.resetBtn{
+background:#ff0000;
+color:white;
+border:none;
+font-size:18px;
+padding:10px 16px;
+cursor:pointer;
+margin-left:5px;
+}
+
+.buttonRow{
+display:flex;
+justify-content:flex-end;
+margin-top:6px;
+}
+
+/* Attendee rows */
+
+.person{
+padding:22px;
+border-bottom:1px solid #ddd;
+font-size:20px;
+cursor:pointer;
+user-select:none;
+}
+
+.person.checked{
+background:#d7f5d7;
+}
+
+/* Modal */
+
+.modal{
+display:none;
+position:fixed;
+z-index:200;
+left:0;
+top:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.4);
+}
+
+.modal-content{
+background:white;
+margin:5% auto;
+padding:20px;
+max-width:500px;
+border-radius:6px;
+}
+
+.close{
+float:right;
+font-size:24px;
+cursor:pointer;
+}
+
+.modal-content label{
+display:block;
+margin-bottom:10px;
+}
+
+.modal-content input,
+.modal-content select{
+width:100%;
+padding:6px;
+margin-top:3px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>CPC Check-In</h2>
+<div id="today"></div>
+
+<div id="topToolbar">
+
+<input type="file" id="fileInput" accept=".csv">
+
+<br>
+
+<button id="addBtn" onclick="showAddModal()">Add New Attendee</button>
+<button class="exportBtn" onclick="exportAttendees()">Export Updated Attendees</button>
+<button class="exportBtn" onclick="exportCheckins()">Export Check-Ins</button>
+<button class="resetBtn" onclick="resetCheckins()">Reset</button>
+
+<input id="search" placeholder="Search attendee">
+
+<div id="counter">Checked in: 0</div>
+
+</div>
+
+<h3>Attendees</h3>
+<ul id="attendeeList" style="list-style:none;padding:0"></ul>
+
+
+<!-- ADD MODAL -->
+
+<div id="addModal" class="modal">
+
+<div class="modal-content">
+
+<span class="close" onclick="closeAddModal()">&times;</span>
+
+<h3>Add New Attendee</h3>
+
+<form id="addForm">
+
+<label>Last Name
+<input id="ln" required>
+</label>
+
+<label>First Name
+<input id="fn" required>
+</label>
+
+<label>English Name
+<input id="en">
+</label>
+
+<label>Chinese Name
+<input id="cn">
+</label>
+
+<label>Email
+<input id="email">
+</label>
+
+<label>Phone
+<input id="phone">
+</label>
+
+<label>Street Address
+<input id="street">
+</label>
+
+<label>City
+<input id="city">
+</label>
+
+<label>State
+<input id="state">
+</label>
+
+<label>ZIP
+<input id="zip">
+</label>
+
+<label>Category
+<select id="cat">
+<option>Pre-K</option>
+<option>K-8</option>
+<option>HS</option>
+<option>Adult</option>
+</select>
+</label>
+
+<label>Primary Language
+<select id="lang">
+<option>English</option>
+<option>Mandarin</option>
+<option>Cantonese</option>
+</select>
+</label>
+
+<button type="button" onclick="addAttendee()">Add Attendee</button>
+
+</form>
+
+</div>
+</div>
+
+
+<script>
+
+let attendees=[]
+let checkins=new Set()
+
+const today=new Date()
+const todayStr=today.toISOString().slice(0,10)
+
+document.getElementById("today").innerText=
+"Today: "+today.toLocaleDateString(undefined,{
+weekday:'long',
+year:'numeric',
+month:'long',
+day:'numeric'
+})
+
+
+/* CSV parsing */
+
+function parseCSVLine(line){
+
+let result=[]
+let cur=""
+let inQuotes=false
+
+for(let i=0;i<line.length;i++){
+
+let ch=line[i]
+
+if(ch=='"'){
+
+if(inQuotes && line[i+1]=='"'){
+cur+='"'
+i++
+}else{
+inQuotes=!inQuotes
+}
+
+}
+
+else if(ch=="," && !inQuotes){
+result.push(cur)
+cur=""
+}
+
+else{
+cur+=ch
+}
+
+}
+
+result.push(cur)
+
+return result
+
+}
+
+function parseCSV(text){
+
+const lines=text.split(/\r?\n/).filter(l=>l.trim()!="")
+
+const headers=parseCSVLine(lines[0])
+
+let data=[]
+
+for(let i=1;i<lines.length;i++){
+
+const row=parseCSVLine(lines[i])
+
+let obj={}
+
+headers.forEach((h,idx)=>{
+obj[h]=row[idx]||""
+})
+
+data.push(obj)
+
+}
+
+return data
+
+}
+
+
+/* Load CSV */
+
+document.getElementById("fileInput").addEventListener("change",function(e){
+
+const file=e.target.files[0]
+
+const reader=new FileReader()
+
+reader.onload=function(evt){
+
+attendees=parseCSV(evt.target.result)
+
+attendees.forEach(a=>a._isNew=false)
+
+attendees.sort((a,b)=>a["Display Name"].localeCompare(b["Display Name"]))
+
+loadCheckins()
+
+renderList()
+updateCounts()
+
+}
+
+reader.readAsText(file)
+
+})
+
+
+/* Ranked search */
+
+function searchRank(person,term){
+
+let text=(person["Display Name"]+" "+(person["Chinese Name"]||"")).toLowerCase()
+
+if(text===term) return 1
+if(text.startsWith(term)) return 2
+if(text.includes(term)) return 3
+
+return 999
+
+}
+
+
+function renderList(){
+
+const search=document.getElementById("search").value.toLowerCase().trim()
+
+const list=document.getElementById("attendeeList")
+
+list.innerHTML=""
+
+let results=attendees
+
+if(search){
+
+results=attendees
+.map(a=>({person:a,rank:searchRank(a,search)}))
+.filter(x=>x.rank<999)
+.sort((a,b)=>a.rank-b.rank)
+.map(x=>x.person)
+
+}
+
+results.forEach(a=>{
+
+const li=document.createElement("li")
+
+li.className="person"
+
+if(checkins.has(a["Display Name"]))
+li.classList.add("checked")
+
+let display=a["Display Name"]
+
+if(a["Chinese Name"])
+display+=" ["+a["Chinese Name"]+"]"
+
+li.textContent=display
+
+li.onclick=()=>toggleCheckin(a)
+
+list.appendChild(li)
+
+})
+
+}
+
+
+/* Search */
+
+document.getElementById("search").addEventListener("input",renderList)
+
+
+/* Toggle checkin */
+
+function toggleCheckin(person){
+
+if(checkins.has(person["Display Name"]))
+checkins.delete(person["Display Name"])
+else
+checkins.add(person["Display Name"])
+
+saveCheckins()
+
+updateCounts()
+renderList()
+
+}
+
+function saveCheckins(){
+
+const key = "churchCheckins-" + todayStr
+
+localStorage.setItem(
+key,
+JSON.stringify([...checkins])
+)
+
+}
+
+
+function loadCheckins(){
+
+const key = "churchCheckins-" + todayStr
+
+const saved = localStorage.getItem(key)
+
+if(saved){
+
+checkins = new Set(JSON.parse(saved))
+
+}
+
+}
+
+function resetCheckins(){
+
+if(!confirm("Clear all check-ins for today?")) return
+
+checkins.clear()
+
+const key = "churchCheckins-" + todayStr
+localStorage.removeItem(key)
+
+renderList()
+updateCounts()
+
+}
+
+/* Counts */
+
+function updateCounts(){
+
+let counts={"Pre-K":0,"K-8":0,"HS":0,"Adult":0}
+
+checkins.forEach(name=>{
+
+const p=attendees.find(a=>a["Display Name"]==name)
+
+if(p) counts[p["Category"]]++
+
+})
+
+document.getElementById("counter").innerHTML=
+`Pre-K ${counts["Pre-K"]} | K-8 ${counts["K-8"]} | HS ${counts["HS"]} | Adult ${counts["Adult"]} | <b>Total ${checkins.size}</b>`
+
+}
+
+
+/* Display name formula */
+
+function makeDisplayName(last,first,english){
+
+let name=last+", "+first
+
+if(english) name+=" ("+english+")"
+
+return name
+
+}
+
+
+/* Add attendee */
+
+function addAttendee(){
+
+const ln=document.getElementById("ln").value.trim()
+const fn=document.getElementById("fn").value.trim()
+const en=document.getElementById("en").value.trim()
+
+const display=makeDisplayName(ln,fn,en)
+
+/* Duplicate detection */
+
+if(attendees.some(a=>a["Display Name"].toLowerCase()==display.toLowerCase())){
+
+if(!confirm("Possible duplicate name detected. Add anyway?"))
+return
+
+}
+
+const person={
+
+"Last Name":ln,
+"First Name":fn,
+"Display Name":display,
+"English Name":en,
+"Chinese Name":document.getElementById("cn").value,
+"Email":document.getElementById("email").value,
+"Phone":document.getElementById("phone").value,
+"Street Address":document.getElementById("street").value,
+"City":document.getElementById("city").value,
+"State":document.getElementById("state").value,
+"ZIP":document.getElementById("zip").value,
+"Category":document.getElementById("cat").value,
+"Primary Language":document.getElementById("lang").value,
+"Date Added":todayStr,
+"_isNew":true
+
+}
+
+attendees.push(person)
+
+attendees.sort((a,b)=>a["Display Name"].localeCompare(b["Display Name"]))
+
+renderList()
+
+closeAddModal()
+
+document.getElementById("addForm").reset()
+
+}
+
+
+/* Modal */
+
+function showAddModal(){
+
+document.getElementById("addModal").style.display="block"
+
+setTimeout(()=>document.getElementById("ln").focus(),100)
+
+}
+
+function closeAddModal(){
+
+document.getElementById("addModal").style.display="none"
+
+}
+
+
+/* CSV escape */
+
+function csvEscape(str){
+
+if(!str) return ""
+
+str=str.toString()
+
+if(str.includes('"'))
+str=str.replace(/"/g,'""')
+
+if(str.includes(",")||str.includes('"'))
+str=`"${str}"`
+
+return str
+
+}
+
+
+/* Export attendees */
+
+function exportAttendees(){
+
+const headers = Object.keys(attendees[0])
+.filter(h => h !== "_isNew")
+
+/* Ensure Date Added column exists */
+if(!headers.includes("Date Added")){
+    headers.push("Date Added")
+}
+
+const rows = attendees.map(a => {
+
+    return headers.map(h => {
+
+        if(h === "Date Added"){
+
+            /* Only populate for new records */
+            if(a._isNew && !a["Date Added"]){
+                a["Date Added"] = todayStr
+            }
+
+            return csvEscape(a["Date Added"] || "")
+        }
+
+        return csvEscape(a[h] || "")
+
+    }).join(",")
+
+})
+
+const csv = headers.join(",") + "\n" + rows.join("\n")
+
+download(csv,"updated-attendees-"+todayStr+".csv")
+
+}
+
+
+/* Export checkins */
+
+function exportCheckins(){
+
+let csv="Check-in Date,Display Name\n"
+
+checkins.forEach(n=>{
+csv+=todayStr+","+csvEscape(n)+"\n"
+})
+
+download(csv,"checkins-"+todayStr+".csv")
+
+}
+
+
+/* Download helper */
+
+function download(text,name){
+
+const blob=new Blob([text],{type:'text/csv'})
+
+const a=document.createElement("a")
+
+a.href=URL.createObjectURL(blob)
+
+a.download=name
+
+a.click()
+
+}
+
+
+/* Autofocus search */
+
+window.onload=function(){
+document.getElementById("search").focus()
+}
+
+</script>
+
+</body>
+</html>
