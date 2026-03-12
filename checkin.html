@@ -260,10 +260,6 @@
             <span class="close" onclick="closeAddModal()">&times;</span>
             <h3>Add New Attendee</h3>
             <form id="addForm">
-                <button class="mdc-button mdc-button--raised" id="btn-add-attendee-1" onclick="addAttendee()">
-                    <i class="material-icons mdc-button__icon" aria-hidden="true">person</i>
-                    <span class="mdc-button__label">Add Attendee</span>
-                </button>
                 <div style="height: 24px;"></div>
                 <label class="mdc-text-field mdc-text-field--outlined">
                     <span class="mdc-notched-outline">
@@ -365,7 +361,7 @@
                     </span>
                     <input id="zip" type="text" class="mdc-text-field__input">
                 </label>
-                <div class="mdc-select mdc-select--outlined attendee-field">
+                <div class="mdc-select mdc-select--outlined attendee-field" id="categorySelect">
                     <div class="mdc-select__anchor">
                         <span class="mdc-notched-outline">
                             <span class="mdc-notched-outline__leading"></span>
@@ -374,9 +370,7 @@
                             </span>
                             <span class="mdc-notched-outline__trailing"></span>
                         </span>
-
                         <span class="mdc-select__selected-text"></span>
-
                         <span class="mdc-select__dropdown-icon">
                             <i class="material-icons">arrow_drop_down</i>
                         </span>
@@ -390,9 +384,8 @@
                         </ul>
                     </div>
                 </div>
-                <div class="mdc-select mdc-select--outlined attendee-field">
+                <div class="mdc-select mdc-select--outlined attendee-field" id="languageSelect">
                     <div class="mdc-select__anchor">
-
                         <span class="mdc-notched-outline">
                             <span class="mdc-notched-outline__leading"></span>
                             <span class="mdc-notched-outline__notch">
@@ -400,15 +393,11 @@
                             </span>
                             <span class="mdc-notched-outline__trailing"></span>
                         </span>
-
                         <span class="mdc-select__selected-text"></span>
-
                         <span class="mdc-select__dropdown-icon">
                             <i class="material-icons">arrow_drop_down</i>
                         </span>
-
                     </div>
-
                     <div class="mdc-select__menu mdc-menu mdc-menu-surface">
                         <ul class="mdc-list">
                             <li class="mdc-list-item" data-value="English">English</li>
@@ -418,7 +407,7 @@
                     </div>
                 </div>
                 <div class="modal-buttons">
-                    <button class="mdc-button mdc-button--raised" id="btn-add-attendee-2" onclick="addAttendee()">
+                    <button class="mdc-button mdc-button--raised" id="btn-add-attendee" onclick="addAttendee()">
                         <i class="material-icons mdc-button__icon" aria-hidden="true">person</i>
                         <span class="mdc-button__label">Add Attendee</span>
                     </button>
@@ -655,8 +644,8 @@
                 "City": document.getElementById("city").value,
                 "State": document.getElementById("state").value,
                 "ZIP": document.getElementById("zip").value,
-                "Category": document.getElementById("cat").value,
-                "Primary Language": document.getElementById("lang").value,
+                "Category": window.categorySelect.value || "Adult",
+                "Primary Language": window.languageSelect.value || "Mandarin",
                 "Date Added": todayStr,
                 "_isNew": true
             }
@@ -757,16 +746,22 @@
         window.onload = function () {
             document.getElementById("search").focus()
             loadSavedCSV()
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
             document.querySelectorAll('.mdc-text-field').forEach(el => {
                 new mdc.textField.MDCTextField(el)
             })
-            document.querySelectorAll('.mdc-select').forEach(el => {
-                new mdc.select.MDCSelect(el)
-            })
-        }
+            window.categorySelect = new mdc.select.MDCSelect(document.getElementById("categorySelect"));
+            window.languageSelect = new mdc.select.MDCSelect(document.getElementById("languageSelect"));
+            // Set default values programmatically
+            window.categorySelect.value = "Adult";
+            window.languageSelect.value = "Mandarin";
+bel(true);
+        });
 
         if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("sw.js?v=0.0.1")
+            navigator.serviceWorker.register("sw.js")
                 .then(() => console.log("Service Worker Registered"));
         }
     </script>
