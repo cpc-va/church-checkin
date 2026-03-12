@@ -1,9 +1,9 @@
 const CACHE_NAME = "church-checkin-v0.0.2";
 
 const urlsToCache = [
-  "./",
-  "./checkin.html",
-  "./manifest.json"
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
 self.addEventListener("install", event => {
