@@ -36,12 +36,26 @@
             z-index: 100;
         }
 
+        .searchContainer {
+            position: relative;
+        }
+
         #search {
             width: 100%;
             font-size: 20px;
             padding: 14px;
-            margin-top: 6px;
-            margin-bottom: 10px;
+            padding-right: 40px;
+        }
+
+        #clearSearch {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 20px;
+            color: #888;
+            display: none;
         }
 
         #counter {
@@ -136,8 +150,18 @@
         .modal-content input,
         .modal-content select {
             width: 100%;
-            padding: 6px;
-            margin-top: 3px;
+            padding: 12px;
+            font-size: 18px;
+        }
+
+        .modal-content button {
+            padding: 14px;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        .modal-content label {
+            font-size: 16px;
         }
     </style>
 </head>
@@ -148,14 +172,14 @@
     <div id="topToolbar">
         <input type="file" id="fileInput" accept=".csv">
         <br>
-        <button class="mdc-button mdc-button--raised">
-            Add
-        </button>
         <button id="addBtn" onclick="showAddModal()">Add New Attendee</button>
         <button class="exportBtn" onclick="exportAttendees()">Export Updated Attendees</button>
         <button class="exportBtn" onclick="exportCheckins()">Export Check-Ins</button>
         <button class="resetBtn" onclick="resetCheckins()">Reset</button>
-        <input id="search" placeholder="Search attendee">
+        <div class="searchContainer">
+            <input id="search" placeholder="Search attendee">
+            <span id="clearSearch">✕</span>
+        </div>
         <div id="counter">Checked in: 0</div>
     </div>
 
@@ -236,6 +260,19 @@
                 day: 'numeric'
             })
 
+        const searchBox = document.getElementById("search")
+        const clearBtn = document.getElementById("clearSearch")
+        searchBox.addEventListener("input", () => {
+            renderList()
+            clearBtn.style.display = searchBox.value ? "block" : "none"
+        })
+        clearBtn.onclick = () => {
+            searchBox.value = ""
+            clearBtn.style.display = "none"
+            renderList()
+            searchBox.focus()
+        }
+
         /* CSV parsing */
         function parseCSVLine(line) {
             let result = []
@@ -310,7 +347,6 @@
         }
 
         /* Ranked search */
-
         function searchRank(person, term) {
             let text = (person["Display Name"] + " " + (person["Chinese Name"] || "")).toLowerCase()
             if (text === term) return 1
@@ -521,4 +557,5 @@
     </script>
 
 </body>
+
 </html>
