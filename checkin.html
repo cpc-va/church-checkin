@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2c7be5">
 <meta charset="UTF-8">
 <title>CPC Check-In</title>
 
@@ -333,7 +335,12 @@ const reader=new FileReader()
 
 reader.onload=function(evt){
 
-attendees=parseCSV(evt.target.result)
+// attendees=parseCSV(evt.target.result)
+const csvText = evt.target.result
+
+saveCSVLocally(csvText)
+
+attendees=parseCSV(csvText)
 
 attendees.forEach(a=>a._isNew=false)
 
@@ -350,6 +357,26 @@ reader.readAsText(file)
 
 })
 
+function loadSavedCSV(){
+
+const saved = localStorage.getItem("attendeeCSV")
+
+if(saved){
+
+attendees = parseCSV(saved)
+
+attendees.forEach(a=>a._isNew=false)
+
+attendees.sort((a,b)=>a["Display Name"].localeCompare(b["Display Name"]))
+
+loadCheckins()
+
+renderList()
+updateCounts()
+
+}
+
+}
 
 /* Ranked search */
 
@@ -663,11 +690,24 @@ a.click()
 
 }
 
+function saveCSVLocally(text){
+
+localStorage.setItem("attendeeCSV", text)
+
+}
 
 /* Autofocus search */
 
 window.onload=function(){
 document.getElementById("search").focus()
+loadSavedCSV()
+}
+
+if ("serviceWorker" in navigator) {
+
+  navigator.serviceWorker.register("sw.js")
+    .then(() => console.log("Service Worker Registered"));
+
 }
 
 </script>
