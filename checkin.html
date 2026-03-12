@@ -445,6 +445,10 @@
         function addAttendee() {
             const ln = document.getElementById("ln").value.trim()
             const fn = document.getElementById("fn").value.trim()
+            if (!ln || !fn) {
+                alert("First Name and Last Name are required.")
+                return
+            }
             const en = document.getElementById("en").value.trim()
             const display = makeDisplayName(ln, fn, en)
             /* Duplicate detection */
